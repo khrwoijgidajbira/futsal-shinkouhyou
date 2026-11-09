@@ -48,6 +48,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--fg); padding: 8px 14px; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; padding: 10px 20px; }
 button:disabled { opacity: .55; cursor: default; }
+[hidden] { display: none !important; }
+.appnote { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 10px 14px; margin: 8px 0; }
+.appnote p { margin: 4px 0; }
 a.btnlink { display: inline-block; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--fg); padding: 8px 14px; text-decoration: none; }
 .scroll { overflow-x: auto; }
 table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -109,6 +112,11 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
     <p>チーム数を入れて「進行表を作る」を押すと、組み合わせと全体のタイムスケジュールができます。できたものはそのまま今と同じ形のExcelで保存できます。計算はすべてこのページの中で行い、データはどこにも送られません。</p>
   </header>
 
+  <div class="appnote" id="inAppNote" hidden>
+      <p>アプリの中のブラウザで開いているため、保存できないことがあります。<b>Safari</b>で開いてから保存してください。</p>
+      <p>やり方：下のボタンでアドレスをコピー → Safariを開く → 上のアドレス欄に貼り付けて開く</p>
+      <div class="actions"><button type="button" id="copyUrl">このページのアドレスをコピー</button><span class="status" id="copyStatus"></span></div>
+    </div>
   <section class="card" aria-labelledby="s1">
     <h2 id="s1"><span class="step">1</span>開催日と過去の大会</h2>
     <div class="row">
@@ -190,7 +198,7 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
       <span class="status" id="saveStatus"></span>
     </div>
     <div class="actions" id="saveOut" hidden></div>
-    <p class="muted" id="inAppNote" hidden>LINEなどのアプリの中で開いていると保存できないことがあります。右上（または右下）のメニューから「ブラウザで開く」「Safariで開く」「Chromeで開く」を選んでから保存してください。</p>
+    
   </section>
 </div>
 
@@ -1256,7 +1264,7 @@ function moveTeam(cat, team, toLetter) {
 /* ---------- 保存（ブラウザで開いたとき） ---------- */
 const UA = navigator.userAgent || '';
 const IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
-const IN_APP = /Line\/|FBAN|FBAV|Instagram|KAKAOTALK|; wv\)/i.test(UA);
+const IN_APP = /Line\/|FBAN|FBAV|Instagram|KAKAOTALK|; wv\)/i.test(UA) || (/iPhone|iPad|iPod/.test(UA) && !/Safari\//.test(UA));
 let lastUrl = null;
 function offerFile(blob, name, st) {
   const out = $('saveOut'); out.innerHTML = ''; out.hidden = false;
@@ -1285,6 +1293,7 @@ function offerFile(blob, name, st) {
     st.textContent = `「${name}」をダウンロードしました。ダウンロードフォルダを確認してください。`;
   }
   if (IN_APP) $('inAppNote').hidden = false;
+  $('copyUrl').addEventListener('click', async () => { const u = location.origin + location.pathname; try { await navigator.clipboard.writeText(u); $('copyStatus').textContent = 'コピーしました：' + u; } catch (e) { $('copyStatus').textContent = u; } });
 }
 
 /* ---------- 保存 ---------- */
