@@ -1079,7 +1079,7 @@ function readInput() {
 }
 
 /* ---------- 作る ---------- */
-function run() {
+function run(scroll) {
   $('status').textContent = '計算しています…';
   $('go').disabled = true;
   setTimeout(() => {
@@ -1092,7 +1092,7 @@ function run() {
       render();
       $('status').textContent = '';
       $('result').hidden = false;
-      $('result').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      if (scroll) $('result').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     } catch (e) {
       console.error(e); $('status').textContent = '作れませんでした：' + (e.message || e);
     } finally { $('go').disabled = false; }
@@ -1331,6 +1331,8 @@ async function save(withColor) {
 
 /* ---------- 初期化 ---------- */
 async function init() {
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  window.scrollTo(0, 0);
   // LINEのアプリ内ブラウザでは保存できないので、ふつうのブラウザで開き直す
   if (window.top === window && /Line\//i.test(UA) && !/openExternalBrowser=1/.test(location.search)) {
     location.replace(location.pathname + (location.search ? location.search + '&' : '?') + 'openExternalBrowser=1' + location.hash); return;
@@ -1353,7 +1355,7 @@ async function init() {
   $('duty1').addEventListener('change', () => { state.dutyManual = true; });
   $('duty2').addEventListener('change', () => { state.dutyManual = true; });
   $('dutyAuto').addEventListener('click', () => { state.dutyManual = false; updateDuty(); });
-  $('go').addEventListener('click', () => { run(); });
+  $('go').addEventListener('click', () => { run(true); });
   $('resetManual').addEventListener('click', () => { state.manual = {}; state.formats = {}; run(); });
   $('save').addEventListener('click', () => save(false));
   $('saveColor').addEventListener('click', () => save(true));
