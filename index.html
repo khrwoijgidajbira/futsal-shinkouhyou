@@ -48,6 +48,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--fg); padding: 8px 14px; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; padding: 10px 20px; }
 button:disabled { opacity: .55; cursor: default; }
+a.btnlink { display: inline-block; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--fg); padding: 8px 14px; text-decoration: none; }
 .scroll { overflow-x: auto; }
 table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .counts th, .counts td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: center; white-space: nowrap; }
@@ -188,6 +189,8 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
       <button type="button" id="saveColor">色分け版を保存</button>
       <span class="status" id="saveStatus"></span>
     </div>
+    <div class="actions" id="saveOut" hidden></div>
+    <p class="muted" id="inAppNote" hidden>LINEなどのアプリの中で開いていると保存できないことがあります。右上（または右下）のメニューから「ブラウザで開く」「Safariで開く」「Chromeで開く」を選んでから保存してください。</p>
   </section>
 </div>
 
@@ -1250,6 +1253,40 @@ function moveTeam(cat, team, toLetter) {
   run();
 }
 
+/* ---------- 保存（ブラウザで開いたとき） ---------- */
+const UA = navigator.userAgent || '';
+const IS_MOBILE = /iPhone|iPad|iPod|Android/i.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+const IN_APP = /Line\/|FBAN|FBAV|Instagram|KAKAOTALK|; wv\)/i.test(UA);
+let lastUrl = null;
+function offerFile(blob, name, st) {
+  const out = $('saveOut'); out.innerHTML = ''; out.hidden = false;
+  if (lastUrl) URL.revokeObjectURL(lastUrl);
+  const url = lastUrl = URL.createObjectURL(blob);
+  let file = null;
+  try { file = new File([blob], name, { type: blob.type }); } catch (e) {}
+  const canShare = !!(file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] }));
+  const link = el('a', { href: url, download: name, class: 'btnlink', text: 'ここをタップしてダウンロード' });
+  if (IS_MOBILE && canShare) {
+    // スマホ：共有メニューから「ファイルに保存」やLINEに送る
+    const sh = el('button', { type: 'button', class: 'primary', text: '保存・送る（共有メニュー）' });
+    sh.addEventListener('click', async () => {
+      try { await navigator.share({ files: [file], title: name }); st.textContent = `「${name}」を共有メニューに渡しました。`; }
+      catch (e) { if (e && e.name !== 'AbortError') st.textContent = '共有できませんでした。下の「ダウンロード」を試してください。'; }
+    });
+    out.append(sh, link);
+    st.textContent = `「${name}」ができました。下のボタンで「ファイルに保存」やLINEに送れます。`;
+  } else if (IS_MOBILE) {
+    out.append(link);
+    st.textContent = `「${name}」ができました。下のリンクをタップして保存してください。`;
+  } else {
+    link.textContent = 'うまく保存されないときはここをクリック';
+    out.append(link);
+    link.click();
+    st.textContent = `「${name}」をダウンロードしました。ダウンロードフォルダを確認してください。`;
+  }
+  if (IN_APP) $('inAppNote').hidden = false;
+}
+
 /* ---------- 保存 ---------- */
 async function save(withColor) {
   const st = $('saveStatus');
@@ -1273,10 +1310,7 @@ async function save(withColor) {
       await downloads.save({ filename: name, data: blob });
       st.textContent = `「${name}」を保存しました。`;
     } else {
-      const url = URL.createObjectURL(blob);
-      const a = el('a', { href: url, download: name }); document.body.append(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
-      st.textContent = `「${name}」をダウンロードしました。ダウンロードフォルダを確認してください。`;
+      offerFile(blob, name, st);
     }
   } catch (e) {
     const code = e && e.code;
@@ -1286,6 +1320,11 @@ async function save(withColor) {
 
 /* ---------- 初期化 ---------- */
 async function init() {
+  // LINEのアプリ内ブラウザでは保存できないので、ふつうのブラウザで開き直す
+  if (window.top === window && /Line\//i.test(UA) && !/openExternalBrowser=1/.test(location.search)) {
+    location.replace(location.pathname + (location.search ? location.search + '&' : '?') + 'openExternalBrowser=1' + location.hash); return;
+  }
+  if (IN_APP) $('inAppNote').hidden = false;
   $('date').value = load('date', fmtDate(nextSecondSunday()));
   $('dY1').value = 8; $('dY2').value = 3; $('dY3').value = 8;
   const dk = load('durK', [10, 2, 10]); $('dK1').value = dk[0]; $('dK2').value = dk[1]; $('dK3').value = dk[2];
