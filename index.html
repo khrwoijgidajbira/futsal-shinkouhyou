@@ -797,7 +797,9 @@ details summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
       ws.getRow(31).hidden = false; ws.getRow(31).height = 10;
       printLast = 31 + teamsByCat.length;
     }
-    ws.pageSetup.printArea = `A1:R${printLast}`;
+    // R列（試合間・試合時間の計算用の数字）は見せない。式はそのまま動く
+    ws.getColumn(18).hidden = true;
+    ws.pageSetup.printArea = `A1:Q${printLast}`;
     Object.assign(ws.pageSetup, { fitToPage: true, fitToWidth: 1, fitToHeight: 1, orientation: 'landscape' });
 
     // ---- 組み合わせ表
